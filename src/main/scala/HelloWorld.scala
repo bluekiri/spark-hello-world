@@ -1,31 +1,26 @@
-import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.sql.SparkSession
 
 /**
   * Hello world (word count).
   */
-object HelloWorld {
+object HelloWorld extends App {
 
-  def main(args: Array[String]): Unit = {
+  // Get spark session
+  val spark = SparkSession
+    .builder()
+    .master(System.getenv().getOrDefault("MASTER", "yarn"))
+    .appName("hello-world")
+    .getOrCreate()
 
-    val env = System.getenv()
+  val phrases = spark.sparkContext.parallelize(Seq("Hello world"))
 
-    // SparkConf
-    val conf = new SparkConf()
-      .setAppName("hello-world")
-      .setMaster(env.getOrDefault("MASTER", "local[2]"))
+  val counts = phrases.flatMap(l => l.split(" ")).map(w => (w, 1)).reduceByKey(_ + _)
 
-    // Get spark session
-    val spark = new SparkContext(conf)
-    val phrases = spark.parallelize(Seq("Hello world"))
-
-    val counts = phrases.flatMap(l => l.split(" ")).map(w => (w, 1)).reduceByKey(_ + _)
-
-    // Print result
-    counts.collect.foreach {
-      case (w: String, c: Int) => println(s"$w -> $c times")
-    }
-
-    spark.stop()
+  // Print result
+  counts.collect.foreach {
+    case (w: String, c: Int) => println(s"$w -> $c times")
   }
+
+  spark.stop()
 
 }
